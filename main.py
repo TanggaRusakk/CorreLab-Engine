@@ -6,6 +6,7 @@ import numpy as np
 from sklearn.linear_model import LinearRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import confusion_matrix
+from statsmodels.tsa.holtwinters import ExponentialSmoothing
 
 app = FastAPI()
 
@@ -110,18 +111,26 @@ def proses_data(payload: DataRequest):
                 }
             
             elif payload.method == "Time Series":
-                X_time = np.arange(len(y)).reshape(-1, 1)
-                model = LinearRegression()
-                model.fit(X_time, y)
-                score = model.score(X_time, y)
+                y_ts = y.astype(float)
+                
+                # Holt's Linear Trend method
+                model = ExponentialSmoothing(y_ts, trend="add", seasonal=None, initialization_method="estimated")
+                fit_model = model.fit()
+                
+                forecast_steps = 10
+                forecast = fit_model.forecast(forecast_steps)
+                
+                historical_data = [{"time": i + 1, "actual": float(val)} for i, val in enumerate(y_ts)]
+                forecast_data = [{"time": len(y_ts) + i + 1, "forecast": float(val)} for i, val in enumerate(forecast)]
+                
+                trend_direction = "Up" if forecast.iloc[-1] > forecast.iloc[0] else "Down"
                 
                 return {
                     **base_response,
                     "method": "Time Series",
-                    "slope": float(model.coef_[0]),
-                    "intercept": float(model.intercept_),
-                    "r_squared": round(float(score), 3),
-                    "trend_direction": "Up" if model.coef_[0] > 0 else "Down"
+                    "historical_data": historical_data,
+                    "forecast_data": forecast_data,
+                    "trend_direction": trend_direction
                 }
         
         return {"success": False, "message": "Metode tidak didukung"}
