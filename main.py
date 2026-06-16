@@ -39,7 +39,7 @@ def proses_data(payload: DataRequest):
             # Otomatis jadikan semua kolom numerik selain target sebagai X
             feature_columns = [col for col in df_numeric.columns if col != payload.target_column]
             
-            if len(feature_columns) == 0:
+            if len(feature_columns) == 0 and payload.method != "Time Series":
                 raise HTTPException(status_code=400, detail="No feature columns found. The dataset must have at least one numeric column besides the target.")
 
             # Calculate Variable Matrix (Stats)
