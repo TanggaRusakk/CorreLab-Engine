@@ -126,5 +126,7 @@ def proses_data(payload: DataRequest):
         
         return {"success": False, "message": "Metode tidak didukung"}
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
