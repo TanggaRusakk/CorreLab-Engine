@@ -40,6 +40,30 @@ def proses_data(payload: DataRequest):
             if len(feature_columns) == 0:
                 raise HTTPException(status_code=400, detail="No feature columns found. The dataset must have at least one numeric column besides the target.")
 
+            # Calculate Variable Matrix (Stats)
+            stats = df_numeric.describe().T
+            variables_info = []
+            for col in df_numeric.columns:
+                variables_info.append({
+                    "name": col,
+                    "type": str(df_numeric[col].dtype),
+                    "mean": f"{stats.loc[col, 'mean']:,.2f}",
+                    "stdDev": f"{stats.loc[col, 'std']:,.2f}",
+                    "missing": f"{df[col].isnull().sum()}"
+                })
+                
+            # Chart Data (Downsample to 100 max)
+            chart_df = df_numeric.sample(min(100, len(df_numeric)), random_state=42) if len(df_numeric) > 100 else df_numeric
+            chart_data = chart_df.fillna(0).to_dict(orient="records")
+
+            base_response = {
+                "success": True,
+                "variables_info": variables_info,
+                "chart_data": chart_data,
+                "feature_used": feature_columns[0] if len(feature_columns) > 0 else "",
+                "target_used": payload.target_column
+            }
+
             X = df_numeric[feature_columns].values
             y = df_numeric[payload.target_column].values
             
@@ -48,9 +72,8 @@ def proses_data(payload: DataRequest):
                 model.fit(X, y)
                 score = model.score(X, y)
                 
-                # Kita bisa kembalikan array untuk slope (koefisien)
                 return {
-                    "success": True, 
+                    **base_response,
                     "method": payload.method,
                     "slope": float(model.coef_[0]) if len(model.coef_) > 0 else 0.0,
                     "intercept": float(model.intercept_),
@@ -58,31 +81,28 @@ def proses_data(payload: DataRequest):
                 }
 
             elif payload.method == "Classification":
-                # Konversi y menjadi integer (kelas)
                 y_class = y.astype(int)
                 model = RandomForestClassifier(n_estimators=100, random_state=42)
                 model.fit(X, y_class)
                 score = model.score(X, y_class)
                 
                 return {
-                    "success": True,
+                    **base_response,
                     "method": "Classification",
                     "accuracy": round(float(score), 3),
-                    "r_squared": round(float(score), 3), # Trik UI: Mengisi r_squared dengan accuracy agar UI existing tidak pecah
+                    "r_squared": round(float(score), 3),
                     "slope": 0.0,
                     "intercept": 0.0
                 }
             
             elif payload.method == "Time Series":
-                # Pendekatan time series sederhana (Basic Trend using Linear Regression on index)
-                # X diubah menjadi array indeks (waktu)
                 X_time = np.arange(len(y)).reshape(-1, 1)
                 model = LinearRegression()
                 model.fit(X_time, y)
                 score = model.score(X_time, y)
                 
                 return {
-                    "success": True,
+                    **base_response,
                     "method": "Time Series",
                     "slope": float(model.coef_[0]),
                     "intercept": float(model.intercept_),
