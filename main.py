@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 from sklearn.linear_model import LinearRegression
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import confusion_matrix
 
 app = FastAPI()
 
@@ -86,13 +87,26 @@ def proses_data(payload: DataRequest):
                 model.fit(X, y_class)
                 score = model.score(X, y_class)
                 
+                y_pred = model.predict(X)
+                cm = confusion_matrix(y_class, y_pred)
+                
+                importances = []
+                for i, col in enumerate(feature_columns):
+                    importances.append({
+                        "feature": col,
+                        "importance": float(model.feature_importances_[i])
+                    })
+                
                 return {
                     **base_response,
                     "method": "Classification",
                     "accuracy": round(float(score), 3),
                     "r_squared": round(float(score), 3),
                     "slope": 0.0,
-                    "intercept": 0.0
+                    "intercept": 0.0,
+                    "confusion_matrix": cm.tolist(),
+                    "feature_importance": importances,
+                    "classes": np.unique(y_class).tolist()
                 }
             
             elif payload.method == "Time Series":
