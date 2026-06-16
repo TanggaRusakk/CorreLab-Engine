@@ -1,0 +1,18 @@
+# Pakai OS Linux dengan Python 3.9
+FROM python:3.9
+
+# Bikin folder kerja di dalam server
+WORKDIR /app
+
+# Copy file requirements dan install library-nya
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy semua file kode lu (main.py)
+COPY . .
+
+# Beri tahu server port mana yang dipakai
+EXPOSE 7860
+
+# Perintah untuk menyalakan FastAPI
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "7860"]
