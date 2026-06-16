@@ -123,7 +123,7 @@ def proses_data(payload: DataRequest):
                 historical_data = [{"time": i + 1, "actual": float(val)} for i, val in enumerate(y_ts)]
                 forecast_data = [{"time": len(y_ts) + i + 1, "forecast": float(val)} for i, val in enumerate(forecast)]
                 
-                trend_direction = "Up" if forecast.iloc[-1] > forecast.iloc[0] else "Down"
+                trend_direction = "Up" if forecast[-1] > forecast[0] else "Down"
                 
                 return {
                     **base_response,
